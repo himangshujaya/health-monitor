@@ -41,19 +41,33 @@ const THRESHOLDS = {
 // Function to send SNS alert
 function sendAlert(patient) {
   const message = `ALERT: Patient ${patient.name} has abnormal vitals!\n\nHeart Rate: ${patient.heart_rate} bpm\nTemperature: ${patient.temperature}°C\nConcern: ${patient.concern}`;
-  
+
   const params = {
     Message: message,
     TopicArn: process.env.SNS_TOPIC_ARN,
     Subject: 'Patient Health Alert'
   };
 
-  sns.publish(params, (err, data) => {
-    if (err) console.error('SNS Error:', err);
-    else console.log('Alert sent via SNS:', data.MessageId);
-  });
-}
+  console.log('DEBUG: Preparing to send SNS alert.'); // New debug line
+  console.log('DEBUG: SNS Params:', JSON.stringify(params, null, 2)); // Log the actual params being sent
+  console.log('DEBUG: Is SNS object initialized?', !!sns); // Check if 'sns' is truly an object
 
+  sns.publish(params, (err, data) => {
+    if (err) {
+      console.error('SNS Callback: ERROR! Full Error Object:', err); // Very detailed error log
+      console.error('SNS Callback: Error Code:', err.code);
+      console.error('SNS Callback: Error Message:', err.message);
+      if (err.statusCode) { // AWS SDK errors often have status codes
+          console.error('SNS Callback: HTTP Status Code:', err.statusCode);
+      }
+    } else {
+      console.log('SNS Callback: SUCCESS! Message ID:', data.MessageId); // Very detailed success log
+      console.log('SNS Callback: Full Response Data:', data);
+    }
+  });
+
+  console.log('DEBUG: SNS publish call initiated.'); // New debug line after calling publish
+}
 // Function to publish patient count to CloudWatch
 function publishPatientCountMetric(count) {
   const params = {
