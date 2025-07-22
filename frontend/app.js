@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-   const apiUrl = 'http://localhost:3000/api';
-
+//    const apiUrl = 'http://ec2-15-207-254-101.ap-south-1.compute.amazonaws.com:3000/api';
+const apiUrl = '/api';
     // Add Patient Form Submission
     const addForm = document.getElementById('add-patient-form');
 
