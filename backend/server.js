@@ -10,30 +10,27 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(bodyParser.json());
-const corsOptions = {
-  origin: 'http://127.0.0.1:5500',
-  optionsSuccessStatus: 200
-};
+app.use(cors());
 
-app.use(cors(corsOptions));
-
-// MySQL DB Connection Pool (More efficient than a single connection)
+// MySQL DB Connection Pool
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
-}).promise(); // Using .promise() is a modern best practice for async/await syntax
+}).promise();
 
-// Configure AWS SDK
+// Configure AWS SDK - This relies on the IAM Role for credentials, not keys.
 AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_REGION
 });
 
-// Uncomment this when SNS is ready
-// const sns = new AWS.SNS();
+console.log('DEBUG: AWS_REGION is set to:', process.env.AWS_REGION);
+console.log('DEBUG: SNS_TOPIC_ARN is set to:', process.env.SNS_TOPIC_ARN);
+
+// Initialize AWS Services
+const sns = new AWS.SNS();
+const cloudwatch = new AWS.CloudWatch();
 
 // Threshold values
 const THRESHOLDS = {
@@ -41,53 +38,72 @@ const THRESHOLDS = {
   temperature: { min: 36.5, max: 40 }
 };
 
-// Uncomment this when SNS is ready
-// function sendAlert(patient) {
-//   const message = `ALERT: Patient ${patient.name} has abnormal vitals!\n\nHeart Rate: ${patient.heartRate}\nTemperature: ${patient.temperature}`;
-//   const params = {
-//     Message: message,
-//     TopicArn: process.env.SNS_TOPIC_ARN,
-//     Subject: 'Patient Health Alert'
-//   };
-//   sns.publish(params, (err, data) => {
-//     if (err) console.error('SNS Error:', err);
-//     else console.log('Alert sent:', data.MessageId);
-//   });
-// }
+// Function to send SNS alert
+function sendAlert(patient) {
+  const message = `ALERT: Patient ${patient.name} has abnormal vitals!\n\nHeart Rate: ${patient.heart_rate} bpm\nTemperature: ${patient.temperature}°C\nConcern: ${patient.concern}`;
+  
+  const params = {
+    Message: message,
+    TopicArn: process.env.SNS_TOPIC_ARN,
+    Subject: 'Patient Health Alert'
+  };
 
-function isAbnormal(patient) {
-  return (
-    patient.heartRate < THRESHOLDS.heartRate.min ||
-    patient.heartRate > THRESHOLDS.heartRate.max ||
-    patient.temperature < THRESHOLDS.temperature.min ||
-    patient.temperature > THRESHOLDS.temperature.max
-  );
+  sns.publish(params, (err, data) => {
+    if (err) console.error('SNS Error:', err);
+    else console.log('Alert sent via SNS:', data.MessageId);
+  });
 }
+
+// Function to publish patient count to CloudWatch
+function publishPatientCountMetric(count) {
+  const params = {
+    MetricData: [{
+        MetricName: 'PatientCount',
+        Value: count,
+        Unit: 'Count'
+    }],
+    Namespace: 'HealthApp'
+  };
+
+  cloudwatch.putMetricData(params, (err, data) => {
+    if (err) console.error("CloudWatch Error:", err);
+    else console.log("Metric published to CloudWatch.");
+  });
+}
+
+const isAbnormal = (patient) => {
+    return (
+        patient.heart_rate < THRESHOLDS.heartRate.min ||
+        patient.heart_rate > THRESHOLDS.heartRate.max ||
+        patient.temperature < THRESHOLDS.temperature.min ||
+        patient.temperature > THRESHOLDS.temperature.max
+    );
+};
 
 // Add patient API
 app.post('/api/patient', async (req, res) => {
   try {
     const { name, age, heartRate, temperature, issue } = req.body;
     
-    // This query now uses the correct table 'patient' and column names
     const sql_insert = 'INSERT INTO patient (name, age, heart_rate, temperature, concern) VALUES (?, ?, ?, ?, ?)';
-    
-    // The values are in the correct order to match the query
     const values = [name, age, heartRate, temperature, issue];
-
     await db.query(sql_insert, values);
 
-    // This part for checking abnormal vitals remains the same
-    const patientForCheck = { name, heartRate, temperature, issue };
-    if (isAbnormal(patientForCheck)) {
-      console.log(`Abnormal vitals detected for ${patientForCheck.name}: HR ${heartRate}, Temp ${temperature}`);
-      // sendAlert(patientForCheck); // Uncomment when SNS is set up
-    }
+    const patientToCheck = {
+        name: name,
+        heart_rate: heartRate,
+        temperature: temperature,
+        concern: issue
+    };
 
-    const [results] = await db.query('SELECT COUNT(*) AS count FROM patient');
-    if (results[0].count >= 7) {
-      console.log('Threshold reached: 7+ patients. This could trigger a CloudWatch alarm.');
+    if (isAbnormal(patientToCheck)) {
+      console.log(`Abnormal vitals detected for ${patientToCheck.name}`);
+      sendAlert(patientToCheck);
     }
+    
+    const [results] = await db.query('SELECT COUNT(*) AS count FROM patient');
+    const patientCount = results[0].count;
+    publishPatientCountMetric(patientCount);
 
     res.status(201).send('Patient added successfully');
   } catch (err) {
