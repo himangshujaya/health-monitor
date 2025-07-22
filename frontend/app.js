@@ -1,21 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // This is the base URL for your backend API
-    const apiUrl = '/api';
+   const apiUrl = 'http://localhost:3000/api';
 
-    //==================================================================
-    // LOGIC FOR ADD PATIENT PAGE (add.html)
-    //==================================================================
+    // Add Patient Form Submission
     const addForm = document.getElementById('add-patient-form');
 
     if (addForm) {
         addForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Stop the form from refreshing the page
+            event.preventDefault();
 
             const patientData = {
                 name: document.getElementById('name').value,
-                age: document.getElementById('age').value,
-                heartRate: document.getElementById('heartRate').value,
-                temperature: document.getElementById('temperature').value,
+                age: parseInt(document.getElementById('age').value),
+                heartRate: parseInt(document.getElementById('heartRate').value),
+                temperature: parseFloat(document.getElementById('temperature').value),
                 issue: document.getElementById('issue').value
             };
 
@@ -28,9 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (response.ok) {
                     alert('Patient added successfully!');
-                    window.location.href = 'patients.html'; // Go to the patient list page
+                    window.location.href = 'patients.html';
                 } else {
-                    alert('Failed to add patient.');
+                    const text = await response.text();
+                    alert('Failed to add patient: ' + text);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -39,9 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    //==================================================================
-    // LOGIC FOR PATIENT LIST PAGE (patients.html)
-    //==================================================================
+    // Patient List Display
     const patientTableBody = document.getElementById('patient-table-body');
 
     if (patientTableBody) {
@@ -50,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch(`${apiUrl}/patients`);
                 const patients = await response.json();
 
-                patientTableBody.innerHTML = ''; // Clear existing table rows
+                patientTableBody.innerHTML = '';
 
                 patients.forEach(patient => {
                     const row = document.createElement('tr');
@@ -66,15 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } catch (error) {
                 console.error('Error fetching patients:', error);
-                patientTableBody.innerHTML = `<tr><td colspan="6">Failed to load data. Is the server running?</td></tr>`;
+                patientTableBody.innerHTML = `<tr><td colspan="6">Failed to load data.</td></tr>`;
             }
         }
         fetchAndDisplayPatients();
     }
 
-    //==================================================================
-    // LOGIC FOR ALERTS PAGE (alerts.html)
-    //==================================================================
+    // Alerts Page
     const alertsContainer = document.getElementById('alerts-container');
 
     if (alertsContainer) {
@@ -84,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const isAbnormal = (patient) => {
-            // CORRECTED: Uses 'heart_rate' to match the database
             return (
                 patient.heart_rate < THRESHOLDS.heartRate.min ||
                 patient.heart_rate > THRESHOLDS.heartRate.max ||
@@ -99,20 +92,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const patients = await response.json();
                 const abnormalPatients = patients.filter(isAbnormal);
 
-                const heading = alertsContainer.querySelector('h2');
                 alertsContainer.querySelectorAll('.alert-card, .no-alerts').forEach(el => el.remove());
 
                 if (abnormalPatients.length === 0) {
-                    const noAlertsMessage = document.createElement('p');
-                    noAlertsMessage.className = 'no-alerts';
-                    noAlertsMessage.textContent = 'No critical alerts at this time. All patients are stable.';
-                    noAlertsMessage.style.textAlign = 'center';
-                    alertsContainer.appendChild(noAlertsMessage);
+                    const msg = document.createElement('p');
+                    msg.className = 'no-alerts';
+                    msg.textContent = 'No critical alerts. All patients are stable.';
+                    alertsContainer.appendChild(msg);
                 } else {
                     abnormalPatients.forEach(patient => {
                         const card = document.createElement('div');
                         card.className = 'alert-card';
-                        // CORRECTED: Uses 'heart_rate' and 'concern' to match the database
                         card.innerHTML = `
                             <h3><i class="fas fa-user-injured"></i> ${patient.name}</h3>
                             <p>Temp: <strong>${patient.temperature}°C</strong> | HR: <strong>${patient.heart_rate} bpm</strong></p>
