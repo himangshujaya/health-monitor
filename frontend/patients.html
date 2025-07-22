@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patient Records - Health Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: #f3f4f6;
+    }
+
+    header {
+      background: linear-gradient(90deg, #16a34a, #4ade80);
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .list-header h2 {
+      color: #1e3a8a;
+      margin: 0; /* Removed margin-bottom */
+    }
+
+    .alerts-button {
+      background: #ef4444; /* A red color for alerts */
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .alerts-button:hover {
+      background: #dc2626;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+      animation: fadeIn 0.6s ease;
+    }
+
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    th {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 600;
+    }
+
+    tr:hover {
+      background: #f9fafb;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      color: #777;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-notes-medical"></i> Patient Records</h1>
+  </header>
+
+  <main>
+    <div class="list-header">
+      <h2>🧾 All Patients List</h2>
+      <a href="alerts.html" class="alerts-button">
+        <i class="fas fa-triangle-exclamation"></i> View Alerts
+      </a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Temp (°C)</th>
+          <th>Heart Rate</th>
+          <th>Concern</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody id="patient-table-body">
+        </tbody>
+    </table>
+  </main>
+
+  <footer>
+    © 2025 Safar Health Project. Empowering remote health monitoring.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
